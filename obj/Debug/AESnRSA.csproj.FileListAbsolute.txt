@@ -1,0 +1,11 @@
+Z:\EncryptApp\AESnRSA\bin\Debug\AESnRSA.exe.config
+Z:\EncryptApp\AESnRSA\bin\Debug\AESnRSA.exe
+Z:\EncryptApp\AESnRSA\bin\Debug\AESnRSA.pdb
+Z:\EncryptApp\AESnRSA\obj\Debug\AESnRSA.csproj.AssemblyReference.cache
+Z:\EncryptApp\AESnRSA\obj\Debug\AESnRSA.csproj.SuggestedBindingRedirects.cache
+Z:\EncryptApp\AESnRSA\obj\Debug\AESnRSA.Form1.resources
+Z:\EncryptApp\AESnRSA\obj\Debug\AESnRSA.Properties.Resources.resources
+Z:\EncryptApp\AESnRSA\obj\Debug\AESnRSA.csproj.GenerateResource.cache
+Z:\EncryptApp\AESnRSA\obj\Debug\AESnRSA.csproj.CoreCompileInputs.cache
+Z:\EncryptApp\AESnRSA\obj\Debug\AESnRSA.exe
+Z:\EncryptApp\AESnRSA\obj\Debug\AESnRSA.pdb
