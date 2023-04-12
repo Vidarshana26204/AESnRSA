@@ -20,11 +20,11 @@ namespace AESnRSA
         }
 
         int AESKeySize, RSAKeySize;
-        string inputFile;
+        string inputFile, outputFile;
         string encryptedFile;
         string decryptedFile;
         string aeskeyFile, aesivFile, rsakeyFile; 
-        bool sourceFile, deFile, aesK, aes4, rsaK; 
+        bool sourceFile, EncFile, aesK, aes4, rsaK; 
 
         public static void EncryptFile(string inputFile, string outputFile, byte[] aesKey, byte[] aesIV, RSA rsa)
         {
@@ -138,8 +138,6 @@ namespace AESnRSA
                         inputFileStream.CopyTo(encryptor);
                     }
                 }
-                File.WriteAllBytes("aesKey_AES.bin", aesKey);
-                File.WriteAllBytes("aesIV_AES.bin", aesIV);
             }
         }
 
@@ -203,22 +201,22 @@ namespace AESnRSA
         }
 
 
-
         private void button1_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog1 = new OpenFileDialog();
             openFileDialog1.InitialDirectory = "C:\\";
             openFileDialog1.Filter = "All files (*.*)|*.*";
-            openFileDialog1.Title = "Select a file";
+            openFileDialog1.Title = "Select a file to Encrypt";
 
 
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                // The user selected a file, so you can access the file path using openFileDialog1.FileName
+                
                 inputFile = openFileDialog1.FileName;
                 sourceFile = true;
             }
             this.comboBox1.SelectedIndex = 0;
+            this.comboBox2.SelectedIndex = 0;
 
         }
 
@@ -230,16 +228,25 @@ namespace AESnRSA
             byte[] aesKeyEncrypted;
             byte[] aesIVEncrypted;
 
-            // Generate AES key and IV
-            using (Aes aes = Aes.Create())
+            SaveFileDialog saveFileDialog1 = new SaveFileDialog();
+
+            saveFileDialog1.Title = "Save Encrypted file";
+            saveFileDialog1.Filter = "Encrypted files (*.bin)|*.bin|All files (*.*)|*.*";
+            saveFileDialog1.FilterIndex = 2;
+            saveFileDialog1.RestoreDirectory = true;
+
+            if (saveFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                aes.KeySize = 256;
-                aes.GenerateKey();
-                aes.GenerateIV();
-                aesKey = aes.Key;
-                aesIV = aes.IV;
+                // Save the file
+                outputFile = saveFileDialog1.FileName;
             }
 
+            // Saving the AES Key files and RSA Private key in the same directory of the encrypted file
+            string directoryPath = Path.GetDirectoryName(outputFile);
+            string aeskeyFilename = "aesKey.bin";
+            string aesIVFilename = "aesIV.bin";
+            aeskeyFilename = Path.Combine(directoryPath, aeskeyFilename);
+            aesIVFilename = Path.Combine(directoryPath, aesIVFilename);
 
             if (radioButton1.Checked)
             {
@@ -254,6 +261,21 @@ namespace AESnRSA
                 else if (comboBox1.SelectedIndex == 2)
                 {
                     AESKeySize = 256;
+                }
+
+                using (Aes aesAlg = Aes.Create())
+                {
+                    //aesAlg.KeySize = keyLength;
+                    aesAlg.BlockSize = 128;
+                    aesAlg.KeySize = AESKeySize;
+                    aesAlg.Mode = CipherMode.CBC;
+                    aesAlg.GenerateKey();
+                    aesAlg.GenerateIV();
+
+                    EncryptFileAES(inputFile, outputFile, aesAlg.Key, aesAlg.IV);
+                    File.WriteAllBytes(aeskeyFilename, aesKey);
+                    File.WriteAllBytes(aesIVFilename, aesIV);
+
                 }
             }
             else if (radioButton2.Checked)
@@ -274,18 +296,28 @@ namespace AESnRSA
                     RSAParameters publicKey = rsa.ExportParameters(false);
                     //byte[] privateKey = rsa.ExportParameters(true);
                     //RSAParameters privateKey = rsa.ExportParameters(true);
-                    File.WriteAllBytes("rsaKey.pem", rsa.ExportRSAPrivateKey());
+                    string rsaKeyFileName = "rsaKey.pem";
+                    string fileinpath = Path.Combine(directoryPath, rsaKeyFileName);
+                    File.WriteAllBytes(fileinpath, rsa.ExportRSAPrivateKey());
                     //byte[] privateKeyBytes = rsa.ExportRSAPrivateKey();
 
-
+                    // Generate AES key and IV
+                    using (Aes aes = Aes.Create())
+                    {
+                        aes.KeySize = AESKeySize;
+                        aes.GenerateKey();
+                        aes.GenerateIV();
+                        aesKey = aes.Key;
+                        aesIV = aes.IV;
+                    }
                     // Encrypt AES key and IV with RSA public key
                     aesKeyEncrypted = rsa.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA256);
                     aesIVEncrypted = rsa.Encrypt(aesIV, RSAEncryptionPadding.OaepSHA256);
 
                     // Encrypt file using AES and save encrypted key and IV
-                    EncryptFile(inputFile, encryptedFile, aesKey, aesIV, rsa);
-                    File.WriteAllBytes("aesKey.bin", aesKeyEncrypted);
-                    File.WriteAllBytes("aesIV.bin", aesIVEncrypted);
+                    EncryptFile(inputFile, outputFile, aesKey, aesIV, rsa);
+                    File.WriteAllBytes(aeskeyFilename, aesKeyEncrypted);
+                    File.WriteAllBytes(aesIVFilename, aesIVEncrypted);
 
                 }
             }
@@ -303,7 +335,7 @@ namespace AESnRSA
             {
                 // The user selected a file, so you can access the file path using openFileDialog1.FileName
                 encryptedFile = openFileDialog2.FileName;
-                deFile = true;
+                EncFile = true;
             }
 
         }
@@ -320,7 +352,7 @@ namespace AESnRSA
             {
                 // The user selected a file, so you can access the file path using openFileDialog1.FileName
                 aesivFile = openFileDialog4.FileName;
-                
+                aes4 = true;    
             }
 
         }
@@ -330,31 +362,33 @@ namespace AESnRSA
             OpenFileDialog openFileDialog5 = new OpenFileDialog();
             openFileDialog2.InitialDirectory = "C:\\";
             openFileDialog2.Filter = "Key files (*.pem)|*.pem|All files (*.*)|*.*";
-            openFileDialog2.Title = "Select a file";
+            openFileDialog2.Title = "Select RSA private key file";
 
 
             if (openFileDialog5.ShowDialog() == DialogResult.OK)
             {
                 // The user selected a file, so you can access the file path using openFileDialog1.FileName
-                aeskeyFile = openFileDialog5.FileName;
-                // Do something with the file...
+                rsakeyFile = openFileDialog5.FileName;
+                rsaK = true;
             }
         }
 
         private void button4_Click(object sender, EventArgs e)
         {
-            if (radioButton3.Checked && aesK && aes4 && deFile)   // AES Mode
+            if (radioButton3.Checked && aesK && aes4 && EncFile)   // AES Mode
             {
-                   
+                byte[] aesKey = File.ReadAllBytes(aeskeyFile);
+                byte[] aesIV = File.ReadAllBytes(aesivFile);
+                DecryptFileAES(encryptedFile, decryptedFile, aesKey, aesIV);
             }
-            else if(radioButton4.Checked && deFile && rsaK)   // RSA Mode
+            else if(radioButton4.Checked && EncFile && rsaK && aes4 && aesK)   // RSA Mode
             {
                 // Decrypt file using RSA private key and saved key and IV
-                byte[] aesKeyDecrypted = File.ReadAllBytes("aesKey.bin");
-                byte[] aesIVDecrypted = File.ReadAllBytes("aesIV.bin");
+                byte[] aesKeyDecrypted = File.ReadAllBytes(aeskeyFile);
+                byte[] aesIVDecrypted = File.ReadAllBytes(aesivFile);
                 //rsa.ImportParameters(privateKey);
                 // Read RSA private key
-                byte[] privateKeyBytes = File.ReadAllBytes("rsaKey.bin");
+                byte[] privateKeyBytes = File.ReadAllBytes(rsakeyFile);
                 RSA rsa = RSA.Create();
                 rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
                 DecryptFile(encryptedFile, decryptedFile, aesKeyDecrypted, aesIVDecrypted, rsa);
