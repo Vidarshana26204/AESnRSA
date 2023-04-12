@@ -104,17 +104,27 @@ namespace AESnRSA
 
                 if (isLargeFile)
                 {
-                    // Encrypt the file in blocks
-                    using (FileStream inputFileStream = new FileStream(inputFile, FileMode.Open))
-                    using (FileStream outputFileStream = new FileStream(outputFile, FileMode.Create))
-                    using (CryptoStream encryptor = new CryptoStream(outputFileStream, aesAlg.CreateEncryptor(), CryptoStreamMode.Write))
+                    // Create the output file stream and the crypto stream
+                    using (FileStream fsOutput = new FileStream(outputFile, FileMode.Create))
+                    //using (Aes aesAlg = Aes.Create())
+                    using (CryptoStream csEncrypt = new CryptoStream(fsOutput, aesAlg.CreateEncryptor(aesKey, aesIV), CryptoStreamMode.Write))
                     {
-                        byte[] buffer = new byte[1048576];
-                        int bytesRead;
+                        // Write the AES key and IV to the output file
+                        
+                        fsOutput.Write(aesKey, 0, aesKey.Length);
+                        fsOutput.Write(aesIV, 0, aesIV.Length);
+                        Console.WriteLine(aesKey.Length);
 
-                        while ((bytesRead = inputFileStream.Read(buffer, 0, buffer.Length)) > 0)
+                        // Encrypt the file in blocks
+                        int bufferSize = 1048576; // 1MB
+                        byte[] buffer = new byte[bufferSize];
+                        using (FileStream fsInput = new FileStream(inputFile, FileMode.Open))
                         {
-                            encryptor.Write(buffer, 0, bytesRead);
+                            int bytesRead;
+                            while ((bytesRead = fsInput.Read(buffer, 0, bufferSize)) > 0)
+                            {
+                                csEncrypt.Write(buffer, 0, bytesRead);
+                            }
                         }
                     }
                 }
@@ -146,22 +156,22 @@ namespace AESnRSA
 
                 if (isLargeFile)
                 {
-                    // Open the input file and output file streams
-                    using (FileStream inputStream = File.OpenRead(inputFile))
-                    using (FileStream outputStream = File.OpenWrite(outputFile))
+                    // Decrypt the AES key and IV with RSA
+                    int KeySize = aesKey.Length * 8;
+
+                    // Create the streams used for decryption
+                    using (FileStream inputFileStream = new FileStream(inputFile, FileMode.Open))
+                    using (FileStream outputFileStream = new FileStream(outputFile, FileMode.Create))
+                    using (CryptoStream decryptStream = new CryptoStream(inputFileStream, aesAlg.CreateDecryptor(aesKey, aesIV), CryptoStreamMode.Read))
                     {
-                        byte[] buffer = new byte[4096];
+                        int offset = 16 + KeySize/8;
+                        inputFileStream.Seek(offset, SeekOrigin.Begin);
+                        // Decrypt the file
+                        byte[] buffer = new byte[1048576];
                         int bytesRead;
-                        // Decrypt each block of the file separately
-                        while ((bytesRead = inputStream.Read(buffer, 0, buffer.Length)) > 0)
+                        while ((bytesRead = decryptStream.Read(buffer, 0, buffer.Length)) > 0)
                         {
-                            // Create a decryptor to perform the stream transform
-                            using (ICryptoTransform decryptor = aesAlg.CreateDecryptor())
-                            {
-                                // Transform the bytes in the buffer and write them to the output file
-                                byte[] decryptedBlock = decryptor.TransformFinalBlock(buffer, 0, bytesRead);
-                                outputStream.Write(decryptedBlock, 0, decryptedBlock.Length);
-                            }
+                            outputFileStream.Write(buffer, 0, bytesRead);
                         }
                     }
                 }
