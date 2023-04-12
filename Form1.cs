@@ -273,8 +273,8 @@ namespace AESnRSA
                     aesAlg.GenerateIV();
 
                     EncryptFileAES(inputFile, outputFile, aesAlg.Key, aesAlg.IV);
-                    File.WriteAllBytes(aeskeyFilename, aesKey);
-                    File.WriteAllBytes(aesIVFilename, aesIV);
+                    File.WriteAllBytes(aeskeyFilename, aesAlg.Key);
+                    File.WriteAllBytes(aesIVFilename, aesAlg.Key);
 
                 }
             }
