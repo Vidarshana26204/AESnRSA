@@ -274,7 +274,7 @@ namespace AESnRSA
 
                     EncryptFileAES(inputFile, outputFile, aesAlg.Key, aesAlg.IV);
                     File.WriteAllBytes(aeskeyFilename, aesAlg.Key);
-                    File.WriteAllBytes(aesIVFilename, aesAlg.Key);
+                    File.WriteAllBytes(aesIVFilename, aesAlg.IV);
 
                 }
             }
